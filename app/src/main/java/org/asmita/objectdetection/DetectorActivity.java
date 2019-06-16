@@ -26,13 +26,21 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.os.Bundle;
 import android.os.SystemClock;
+import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.widget.Toast;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+
 import org.asmita.objectdetection.customview.OverlayView;
 import org.asmita.objectdetection.customview.OverlayView.DrawCallback;
 import org.asmita.objectdetection.env.BorderedText;
@@ -61,6 +69,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
   private static final float TEXT_SIZE_DIP = 10;
+
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
 
@@ -81,6 +90,24 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private MultiBoxTracker tracker;
 
   private BorderedText borderedText;
+  TextToSpeech tts;
+  private boolean canSpeak = false;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    tts = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+      @Override
+      public void onInit(int status) {
+        if(status != TextToSpeech.ERROR) {
+          tts.setLanguage(Locale.UK);
+          canSpeak = true;
+        } else {
+          Log.e("text to speech", "initialization failed");
+        }
+      }
+    });
+  }
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -147,6 +174,81 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
   }
 
+  private HashMap<String, ArrayList<String>> getPartitionedObjects(List<Classifier.Recognition> results) {
+    int width = croppedBitmap.getWidth();
+    Log.d("width", width+"");
+    HashMap<String, ArrayList<String>> partitionedObjects = new HashMap<>();
+    partitionedObjects.put("left", new ArrayList<>());
+    partitionedObjects.put("front", new ArrayList<>());
+    partitionedObjects.put("right", new ArrayList<>());
+
+    for (Classifier.Recognition result: results) {
+      Log.d("title", result.getTitle());
+      Log.d("location: left", result.getLocation().left+"");
+      Log.d("location: right", result.getLocation().right+"");
+    }
+    return partitionedObjects;
+  }
+
+  private String formPartialSentence(ArrayList<String> objects) {
+    if (objects == null || objects.size() == 0) {
+      return "";
+    }
+    String partialSentence = String.join(", ", objects);
+    // replace last comma with 'and'
+    // ex: book, laptop, apple -> book, laptop and apple
+    int lastCommaIndex = partialSentence.lastIndexOf(",");
+
+    if (lastCommaIndex == -1) {
+      return partialSentence;
+    }
+    return partialSentence.substring(0, lastCommaIndex)+ " and" + partialSentence.substring(lastCommaIndex);
+  }
+
+  private String formSentence(String leftSentence, String frontSentence, String rightSentence) {
+    if (leftSentence.isEmpty() && frontSentence.isEmpty() && rightSentence.isEmpty()) {
+      return "";
+    }
+
+    String baseSentence = "There's ";
+    boolean previousSentenceExists = false;
+
+    if (!leftSentence.isEmpty()) {
+      baseSentence += leftSentence + " on your left, ";
+      previousSentenceExists = true;
+    }
+
+    if (!frontSentence.isEmpty()) {
+      if (previousSentenceExists) {
+        baseSentence += "and ";
+      }
+      baseSentence += frontSentence + " in front of you, ";
+      previousSentenceExists = true;
+    }
+
+    if (!leftSentence.isEmpty()) {
+      if (previousSentenceExists) {
+        baseSentence += "and ";
+      }
+      baseSentence += leftSentence + " on your right";
+    }
+    // clean trailing ', ' if any
+    return baseSentence.replaceAll(", $", "");
+  }
+
+  private void sayDetectedObjectLocations(List<Classifier.Recognition> results) {
+    HashMap<String, ArrayList<String>> partitionedObjects = getPartitionedObjects(results);
+    String objectsOnLeft = formPartialSentence(partitionedObjects.get("left"));
+    String objectsInFront = formPartialSentence(partitionedObjects.get("front"));
+    String objectsOnRight = formPartialSentence(partitionedObjects.get("right"));
+
+    String completeSentence = formSentence(objectsOnLeft, objectsInFront, objectsOnRight);
+
+    if(canSpeak) {
+      tts.speak(completeSentence, TextToSpeech.QUEUE_ADD, null);
+    }
+  }
+
   @Override
   protected void processImage() {
     ++timestamp;
@@ -179,8 +281,10 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             LOGGER.i("Running detection on image " + currTimestamp);
             final long startTime = SystemClock.uptimeMillis();
             final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
-            lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
 
+            sayDetectedObjectLocations(results);
+
+            lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
             final Canvas canvas = new Canvas(cropCopyBitmap);
             final Paint paint = new Paint();
