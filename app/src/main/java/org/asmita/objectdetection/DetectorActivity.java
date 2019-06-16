@@ -178,18 +178,42 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
   }
 
+  private String objectPositionClassifier(Classifier.Recognition object) {
+    int frameWidth = croppedBitmap.getWidth();
+    float objectLeft = object.getLocation().left;
+    float objectRight = object.getLocation().right;
+
+    double frameCentre = frameWidth*0.5;
+    double rightEdgeDistanceFromCentre = (objectRight - frameCentre);
+    double leftEdgeDistanceFromCentre = (objectLeft - frameCentre);
+
+    // left and right edge of object is on different sides of the centre -> object is in front
+    if (rightEdgeDistanceFromCentre * leftEdgeDistanceFromCentre  < 0) {
+      return "front";
+    } else if (rightEdgeDistanceFromCentre < 0){
+      if (Math.abs(rightEdgeDistanceFromCentre) <= frameWidth*0.05
+              && Math.abs(leftEdgeDistanceFromCentre) <= frameWidth*0.15) {
+        return "front";
+      }
+      return "left";
+    } else {
+      if (Math.abs(rightEdgeDistanceFromCentre) <= frameWidth*0.15
+              && Math.abs(leftEdgeDistanceFromCentre) <= frameWidth*0.05) {
+        return "front";
+      }
+      return "right";
+    }
+  }
+
   private HashMap<String, ArrayList<String>> getPartitionedObjects(List<Classifier.Recognition> results) {
-    int width = croppedBitmap.getWidth();
-    Log.d("width", width+"");
     HashMap<String, ArrayList<String>> partitionedObjects = new HashMap<>();
     partitionedObjects.put("left", new ArrayList<>());
     partitionedObjects.put("front", new ArrayList<>());
     partitionedObjects.put("right", new ArrayList<>());
 
     for (Classifier.Recognition result: results) {
-      Log.d("title", result.getTitle());
-      Log.d("location: left", result.getLocation().left+"");
-      Log.d("location: right", result.getLocation().right+"");
+      String position = objectPositionClassifier(result);
+      partitionedObjects.get(position).add(result.getTitle());
     }
     return partitionedObjects;
   }
