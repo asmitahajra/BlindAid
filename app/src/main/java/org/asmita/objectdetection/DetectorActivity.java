@@ -71,6 +71,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final boolean SAVE_PREVIEW_BITMAP = false;
   private static final float TEXT_SIZE_DIP = 10;
   private static final int MIN_STALE_SILENT_DURATION = 5000;
+  private static final String POSITION_LEFT = "left";
+  private static final String POSITION_FRONT = "front";
+  private static final String POSITION_RIGHT = "right";
 
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
@@ -95,7 +98,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   TextToSpeech tts;
   private boolean canSpeak = false;
   private long lastSpokenTimeStamp = 0;
-  private String lastSpokenSentence = "";
+  private HashMap<String, ArrayList<String>> objectsToSpeak;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +114,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         }
       }
     });
+    resetObjectsToSpeak();
+  }
+
+  private void resetObjectsToSpeak() {
+    objectsToSpeak = new HashMap<>();
+    objectsToSpeak.put(POSITION_LEFT, new ArrayList<>());
+    objectsToSpeak.put(POSITION_FRONT, new ArrayList<>());
+    objectsToSpeak.put(POSITION_RIGHT, new ArrayList<>());
   }
 
   @Override
@@ -189,33 +200,32 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     // left and right edge of object is on different sides of the centre -> object is in front
     if (rightEdgeDistanceFromCentre * leftEdgeDistanceFromCentre  < 0) {
-      return "front";
+      return POSITION_FRONT;
     } else if (rightEdgeDistanceFromCentre < 0){
       if (Math.abs(rightEdgeDistanceFromCentre) <= frameWidth*0.05
               && Math.abs(leftEdgeDistanceFromCentre) <= frameWidth*0.15) {
-        return "front";
+        return POSITION_FRONT;
       }
-      return "left";
+      return POSITION_LEFT;
     } else {
       if (Math.abs(rightEdgeDistanceFromCentre) <= frameWidth*0.15
               && Math.abs(leftEdgeDistanceFromCentre) <= frameWidth*0.05) {
-        return "front";
+        return POSITION_FRONT;
       }
-      return "right";
+      return POSITION_RIGHT;
     }
   }
 
-  private HashMap<String, ArrayList<String>> getPartitionedObjects(List<Classifier.Recognition> results) {
-    HashMap<String, ArrayList<String>> partitionedObjects = new HashMap<>();
-    partitionedObjects.put("left", new ArrayList<>());
-    partitionedObjects.put("front", new ArrayList<>());
-    partitionedObjects.put("right", new ArrayList<>());
-
+  private HashMap<String, ArrayList<String>> getobjectsToSpeak(List<Classifier.Recognition> results) {
     for (Classifier.Recognition result: results) {
       String position = objectPositionClassifier(result);
-      partitionedObjects.get(position).add(result.getTitle());
+      ArrayList<String> objectsInPosition = objectsToSpeak.get(position);
+      // don't add same object to same position again
+      if (!objectsInPosition.contains(result.getTitle())) {
+        objectsInPosition.add(result.getTitle());
+      }
     }
-    return partitionedObjects;
+    return objectsToSpeak;
   }
 
   private String formPartialSentence(ArrayList<String> objects) {
@@ -230,7 +240,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     if (lastCommaIndex == -1) {
       return partialSentence;
     }
-    return partialSentence.substring(0, lastCommaIndex)+ " and" + partialSentence.substring(lastCommaIndex);
+    return partialSentence.substring(0, lastCommaIndex)+ " and" + partialSentence.substring(lastCommaIndex+1);
   }
 
   private String formSentence(String leftSentence, String frontSentence, String rightSentence) {
@@ -242,26 +252,25 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     boolean previousSentenceExists = false;
 
     if (!leftSentence.isEmpty()) {
-      baseSentence += leftSentence + " on your left, ";
+      baseSentence += leftSentence + " on your left";
       previousSentenceExists = true;
     }
 
     if (!frontSentence.isEmpty()) {
       if (previousSentenceExists) {
-        baseSentence += "and ";
+        baseSentence += " and ";
       }
-      baseSentence += frontSentence + " in front of you, ";
+      baseSentence += frontSentence + " in front of you";
       previousSentenceExists = true;
     }
 
-    if (!leftSentence.isEmpty()) {
+    if (!rightSentence.isEmpty()) {
       if (previousSentenceExists) {
-        baseSentence += "and ";
+        baseSentence += " and ";
       }
-      baseSentence += leftSentence + " on your right";
+      baseSentence += rightSentence + " on your right";
     }
-    // clean trailing ', ' if any
-    return baseSentence.replaceAll(", $", "");
+    return baseSentence;
   }
 
   private long getCurrentTimeStamp() {
@@ -270,25 +279,25 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   }
 
   private void sayDetectedObjectLocations(List<Classifier.Recognition> results) {
-    HashMap<String, ArrayList<String>> partitionedObjects = getPartitionedObjects(results);
-    String objectsOnLeft = formPartialSentence(partitionedObjects.get("left"));
-    String objectsInFront = formPartialSentence(partitionedObjects.get("front"));
-    String objectsOnRight = formPartialSentence(partitionedObjects.get("right"));
+    HashMap<String, ArrayList<String>> objectsToSpeak = getobjectsToSpeak(results);
+    String objectsOnLeft = formPartialSentence(objectsToSpeak.get(POSITION_LEFT));
+    String objectsInFront = formPartialSentence(objectsToSpeak.get(POSITION_FRONT));
+    String objectsOnRight = formPartialSentence(objectsToSpeak.get(POSITION_RIGHT));
 
     String completeSentence = formSentence(objectsOnLeft, objectsInFront, objectsOnRight);
 
     // don't speak same thing again unless you've been silent for 5secs
     if (lastSpokenTimeStamp + MIN_STALE_SILENT_DURATION > getCurrentTimeStamp()
-            && lastSpokenSentence.equals(completeSentence)) {
+      /* && lastSpokenSentence.equals(completeSentence)*/) {
       return;
     }
 
     lastSpokenTimeStamp = getCurrentTimeStamp();
-    lastSpokenSentence = completeSentence;
 
     Log.d("gonna speak", completeSentence);
     if(canSpeak) {
-      tts.speak(completeSentence, TextToSpeech.QUEUE_FLUSH, null);
+      tts.speak(completeSentence, TextToSpeech.QUEUE_ADD, null);
+      resetObjectsToSpeak();
     } else {
       Log.e("tts error", "cannot speak");
     }
@@ -325,8 +334,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
             final long startTime = SystemClock.uptimeMillis();
-            final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
+            List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
 
+            results = results.stream().filter(
+                    result -> result.getLocation() != null &&result.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API
+            ).collect(Collectors.toList());
             sayDetectedObjectLocations(results);
 
             lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
@@ -337,26 +349,18 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             paint.setStyle(Style.STROKE);
             paint.setStrokeWidth(2.0f);
 
-            float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-            switch (MODE) {
-              case TF_OD_API:
-                minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                break;
-            }
 
             final List<Classifier.Recognition> mappedRecognitions =
                 new LinkedList<Classifier.Recognition>();
 
             for (final Classifier.Recognition result : results) {
               final RectF location = result.getLocation();
-              if (location != null && result.getConfidence() >= minimumConfidence) {
-                canvas.drawRect(location, paint);
+              canvas.drawRect(location, paint);
 
-                cropToFrameTransform.mapRect(location);
+              cropToFrameTransform.mapRect(location);
 
-                result.setLocation(location);
-                mappedRecognitions.add(result);
-              }
+              result.setLocation(location);
+              mappedRecognitions.add(result);
             }
 
             tracker.trackResults(mappedRecognitions, currTimestamp);
