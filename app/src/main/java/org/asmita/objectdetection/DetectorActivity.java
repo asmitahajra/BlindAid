@@ -35,6 +35,7 @@ import android.util.TypedValue;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,6 +70,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
   private static final float TEXT_SIZE_DIP = 10;
+  private static final int MIN_STALE_SILENT_DURATION = 5000;
 
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
@@ -92,6 +94,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private BorderedText borderedText;
   TextToSpeech tts;
   private boolean canSpeak = false;
+  private long lastSpokenTimeStamp = 0;
+  private String lastSpokenSentence = "";
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -236,6 +240,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     return baseSentence.replaceAll(", $", "");
   }
 
+  private long getCurrentTimeStamp() {
+    Date date = new Date();
+    return date.getTime();
+  }
+
   private void sayDetectedObjectLocations(List<Classifier.Recognition> results) {
     HashMap<String, ArrayList<String>> partitionedObjects = getPartitionedObjects(results);
     String objectsOnLeft = formPartialSentence(partitionedObjects.get("left"));
@@ -244,8 +253,20 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     String completeSentence = formSentence(objectsOnLeft, objectsInFront, objectsOnRight);
 
+    // don't speak same thing again unless you've been silent for 5secs
+    if (lastSpokenTimeStamp + MIN_STALE_SILENT_DURATION > getCurrentTimeStamp()
+            && lastSpokenSentence.equals(completeSentence)) {
+      return;
+    }
+
+    lastSpokenTimeStamp = getCurrentTimeStamp();
+    lastSpokenSentence = completeSentence;
+
+    Log.d("gonna speak", completeSentence);
     if(canSpeak) {
-      tts.speak(completeSentence, TextToSpeech.QUEUE_ADD, null);
+      tts.speak(completeSentence, TextToSpeech.QUEUE_FLUSH, null);
+    } else {
+      Log.e("tts error", "cannot speak");
     }
   }
 
