@@ -23,16 +23,29 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
+import androidx.annotation.NonNull;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.widget.Toast;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.text.FirebaseVisionText;
+import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.firebase.ml.vision.text.RecognizedLanguage;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -86,6 +99,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private Bitmap cropCopyBitmap = null;
 
   private boolean computingDetection = false;
+  private boolean runningTextRecognition = false;
 
   private long timestamp = 0;
 
@@ -303,6 +317,59 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }
   }
 
+  private String extractDetectedText(FirebaseVisionText result) {
+    String resultText = result.getText();
+    for (FirebaseVisionText.TextBlock block: result.getTextBlocks()) {
+      String blockText = block.getText();
+      Float blockConfidence = block.getConfidence();
+      List<RecognizedLanguage> blockLanguages = block.getRecognizedLanguages();
+      Point[] blockCornerPoints = block.getCornerPoints();
+      Rect blockFrame = block.getBoundingBox();
+      for (FirebaseVisionText.Line line: block.getLines()) {
+        String lineText = line.getText();
+        Float lineConfidence = line.getConfidence();
+        List<RecognizedLanguage> lineLanguages = line.getRecognizedLanguages();
+        Point[] lineCornerPoints = line.getCornerPoints();
+        Rect lineFrame = line.getBoundingBox();
+        for (FirebaseVisionText.Element element: line.getElements()) {
+          String elementText = element.getText();
+          Float elementConfidence = element.getConfidence();
+          List<RecognizedLanguage> elementLanguages = element.getRecognizedLanguages();
+          Point[] elementCornerPoints = element.getCornerPoints();
+          Rect elementFrame = element.getBoundingBox();
+        }
+      }
+    }
+    return resultText;
+  }
+
+  private void runTextRecognition() {
+    if (runningTextRecognition) {
+      return;
+    }
+    runningTextRecognition = true;
+    FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(croppedBitmap);
+    FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
+            .getOnDeviceTextRecognizer();
+    Task<FirebaseVisionText> result =
+            detector.processImage(image)
+                    .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                      @Override
+                      public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                        runningTextRecognition = false;
+                        Log.d("detected text", extractDetectedText(firebaseVisionText));
+                      }
+                    })
+                    .addOnFailureListener(
+                            new OnFailureListener() {
+                              @Override
+                              public void onFailure(@NonNull Exception e) {
+                                runningTextRecognition = false;
+                                Log.d("detected text", e.toString());
+                              }
+                            });
+  }
+
   @Override
   protected void processImage() {
     ++timestamp;
@@ -333,6 +400,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           @Override
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
+            runTextRecognition();
             final long startTime = SystemClock.uptimeMillis();
             List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
 

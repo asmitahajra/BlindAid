@@ -7,7 +7,6 @@
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
-
     <application
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
@@ -16,6 +15,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <meta-data
+            android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+            android:value="ocr" />
         <activity
             android:name=".DetectorActivity"
             android:label="@string/activity_name_detection"
