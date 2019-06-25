@@ -61,6 +61,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.asmita.objectdetection.customview.OverlayView;
@@ -100,6 +102,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String POSITION_FRONT = "front";
   private static final String POSITION_RIGHT = "right";
   private final String REGEX_OCR_TRIGGER_SPEECH = "(what('s| is) written in front of me)|(read)";
+  private final String REGEX_START_GUIDING = "(start guiding( ?me)?)|(guide( ?me)?)";
+  private final String REGEX_STOP_GUIDING = "stop( guiding( ?me)?)?";
   private final String ERROR_COULDNT_READ = "I can't see anything written in front of you!";
 
   OverlayView trackingOverlay;
@@ -132,6 +136,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private String extractedBarcodeText = "";
   private TextView recognitionResults;
   private TextView barcodeRecognitionResults;
+  private boolean shouldGuide = false;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -332,7 +337,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     Log.d("gonna speak", completeSentence);
     if(canSpeak) {
-      tts.speak(completeSentence, TextToSpeech.QUEUE_ADD, null);
+      if (shouldGuide) {
+        tts.speak(completeSentence, TextToSpeech.QUEUE_ADD, null);
+      }
       resetObjectsToSpeak();
     } else {
       Log.e("tts error", "cannot speak");
@@ -574,6 +581,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 //    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
   }
 
+  private boolean matches(String regex, String text) {
+    Pattern pattern = Pattern.compile(regex);
+    Matcher matcher = pattern.matcher(text);
+    return matcher.find();
+  }
+
   private void initSpeechRecognitionListener() {
     listener =
             new SpeechRecognitionListener(this, new SpeechRecognitionListener.OnSpeechRecognitionResult() {
@@ -581,9 +594,15 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               public void onSuccess(ArrayList<String> matches) {
                 for(String match: matches) {
                   Log.d("SpeechRecognitionListener", match);
-                  if (match.matches(REGEX_OCR_TRIGGER_SPEECH)) {
+                  ;
+                  if (matches(REGEX_OCR_TRIGGER_SPEECH, match)) {
                     speakRecognizedText();
                     break;
+                  } else if (matches(REGEX_START_GUIDING, match)) {
+                    lastSpokenTimeStamp = 0;
+                    shouldGuide = true;
+                  } else if (matches(REGEX_STOP_GUIDING, match)) {
+                    shouldGuide = false;
                   }
                 }
               }
