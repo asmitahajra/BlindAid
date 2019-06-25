@@ -17,7 +17,7 @@
 
         <meta-data
             android:name="com.google.firebase.ml.vision.DEPENDENCIES"
-            android:value="ocr" />
+            android:value="ocr, barcode" />
         <activity
             android:name=".DetectorActivity"
             android:label="@string/activity_name_detection"

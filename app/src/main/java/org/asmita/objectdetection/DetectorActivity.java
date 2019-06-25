@@ -67,6 +67,10 @@ import org.asmita.objectdetection.tflite.Classifier;
 import org.asmita.objectdetection.tflite.TFLiteObjectDetectionAPIModel;
 import org.asmita.objectdetection.tracking.MultiBoxTracker;
 
+import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode;
+import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector;
+import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions;
+
 /**
  * An activity that uses a TensorFlowMultiBoxDetector and ObjectTracker to detect and then track
  * objects.
@@ -81,7 +85,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String TF_OD_API_LABELS_FILE = "file:///android_asset/labelmap.txt";
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
-  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
+  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.659f;
   private static final boolean MAINTAIN_ASPECT = false;
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
@@ -103,6 +107,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private boolean computingDetection = false;
   private boolean runningTextRecognition = false;
+  private boolean runningBarRecognition = false;
 
   private long timestamp = 0;
 
@@ -325,7 +330,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }
   }
 
-  private String extractDetectedText(FirebaseVisionText result) {
+  private String extractDetectedText(FirebaseVisionText result)
+  {
     String resultText = result.getText();
     for (FirebaseVisionText.TextBlock block: result.getTextBlocks()) {
       String blockText = block.getText();
@@ -350,6 +356,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }
     return resultText;
   }
+
+
 
   private void runTextRecognition() {
     if (runningTextRecognition) {
@@ -381,6 +389,59 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                               }
                             });
   }
+
+  private void runBarRecognition() {
+    if (runningBarRecognition) {
+      return;
+    }
+    runningTextRecognition = true;
+    FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(croppedBitmap);
+    FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance()
+            .getVisionBarcodeDetector();
+    Task<List<FirebaseVisionBarcode>> result = detector.detectInImage(image)
+            .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionBarcode>>() {
+              @Override
+              public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
+                for (FirebaseVisionBarcode barcode : barcodes) {
+                  Rect bounds = barcode.getBoundingBox();
+                  Point[] corners = barcode.getCornerPoints();
+
+                  String rawValue = barcode.getRawValue();
+
+                  int valueType = barcode.getValueType();
+                  // See API reference for complete list of supported types
+                  switch (valueType) {
+                    case FirebaseVisionBarcode.TYPE_WIFI:
+                      String ssid = barcode.getWifi().getSsid();
+                      String password = barcode.getWifi().getPassword();
+                      int type = barcode.getWifi().getEncryptionType();
+                      break;
+                    case FirebaseVisionBarcode.TYPE_URL:
+                      String title = barcode.getUrl().getTitle();
+                      String url = barcode.getUrl().getUrl();
+                      break;
+                  }
+
+                  // Task completed successfully
+                  // ...
+
+                }
+              }
+            })
+            .addOnFailureListener(new OnFailureListener() {
+              @Override
+              public void onFailure(@NonNull Exception e) {
+                // Task failed with an exception
+                // ...
+              }
+            });
+
+
+  }
+
+
+
+
 
   @Override
   protected void processImage() {
