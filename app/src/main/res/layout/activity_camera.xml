@@ -33,14 +33,18 @@
             android:id="@+id/container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="200px"
+            android:layout_marginBottom="100dp"
             tools:context="org.tensorflow.demo.CameraActivity" />
         <TextView
             android:id="@+id/recognition_results"
-            android:layout_below="@id/container"
+            android:layout_gravity="left"
+            android:padding="10dp"
+            android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
             android:scrollbars="vertical"
-            android:layout_height="200px" />
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:layout_height="100dp" />
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
