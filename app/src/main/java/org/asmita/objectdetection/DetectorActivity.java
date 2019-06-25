@@ -32,9 +32,12 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import androidx.annotation.NonNull;
+
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -113,6 +116,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private boolean canSpeak = false;
   private long lastSpokenTimeStamp = 0;
   private HashMap<String, ArrayList<String>> objectsToSpeak;
+  private String detectedText = "";
+  private TextView recognitionResults;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -128,6 +133,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         }
       }
     });
+    recognitionResults = findViewById(R.id.recognition_results);
+    recognitionResults.setMovementMethod(new ScrollingMovementMethod());
     resetObjectsToSpeak();
   }
 
@@ -302,6 +309,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     // don't speak same thing again unless you've been silent for 5secs
     if (lastSpokenTimeStamp + MIN_STALE_SILENT_DURATION > getCurrentTimeStamp()
+            || !detectedText.isEmpty()
       /* && lastSpokenSentence.equals(completeSentence)*/) {
       return;
     }
@@ -357,7 +365,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                       @Override
                       public void onSuccess(FirebaseVisionText firebaseVisionText) {
                         runningTextRecognition = false;
-                        Log.d("detected text", extractDetectedText(firebaseVisionText));
+                        detectedText = extractDetectedText(firebaseVisionText);
+                        // TODO : auto-correct the detected text
+                        recognitionResults.setText(detectedText);
+                        tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
+                        Log.d("detected text", detectedText);
                       }
                     })
                     .addOnFailureListener(
