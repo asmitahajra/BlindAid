@@ -19,6 +19,7 @@ Application can run either on device or emulator.
 Barcode detection
 
 ![dental](https://user-images.githubusercontent.com/30727326/60104180-8edc8180-977e-11e9-98fa-cafbbea975c8.jpeg)
+
 Text detection example 1
 
 ![salt](https://user-images.githubusercontent.com/30727326/60102562-9189a780-977b-11e9-82b3-b805a127313c.jpeg)
