@@ -33,13 +33,24 @@
             android:id="@+id/container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="100dp"
+            android:layout_marginBottom="200dp"
             tools:context="org.tensorflow.demo.CameraActivity" />
         <TextView
             android:id="@+id/recognition_results"
             android:layout_gravity="left"
             android:padding="10dp"
             android:layout_alignParentBottom="true"
+            android:layout_width="match_parent"
+            android:scrollbars="vertical"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:layout_height="100dp" />
+
+        <TextView
+            android:id="@+id/barcode_recognition_results"
+            android:layout_gravity="left"
+            android:padding="10dp"
+            android:layout_above="@+id/recognition_results"
             android:layout_width="match_parent"
             android:scrollbars="vertical"
             android:textSize="16sp"

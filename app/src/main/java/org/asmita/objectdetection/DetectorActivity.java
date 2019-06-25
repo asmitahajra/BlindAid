@@ -125,6 +125,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private String detectedText = "";
   private String extractedBarcodeText = "";
   private TextView recognitionResults;
+  private TextView barcodeRecognitionResults;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -141,6 +142,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       }
     });
     recognitionResults = findViewById(R.id.recognition_results);
+    barcodeRecognitionResults = findViewById(R.id.barcode_recognition_results);
     recognitionResults.setMovementMethod(new ScrollingMovementMethod());
     resetObjectsToSpeak();
   }
@@ -378,8 +380,10 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                         runningTextRecognition = false;
                         detectedText = extractDetectedText(firebaseVisionText);
                         // TODO : auto-correct the detected text
-                        recognitionResults.setText(detectedText);
-                        tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
+                        if (!detectedText.isEmpty()) {
+                          recognitionResults.setText("Detected text:\n" + detectedText);
+                          tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
+                        }
                         Log.d("detected text", detectedText);
                       }
                     })
@@ -401,6 +405,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       Point[] corners = barcode.getCornerPoints();
 
       String extractedBarcodeText = barcode.getRawValue();
+      Log.d("detected raw bar code data", extractedBarcodeText);
       int valueType = barcode.getValueType();
       // See API reference for complete list of supported types
       try {
@@ -409,12 +414,16 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             String ssid = barcode.getWifi().getSsid();
             String password = barcode.getWifi().getPassword();
             int type = barcode.getWifi().getEncryptionType();
-            extractedBarcodeText = String.format("SSID: %s\nPassword: %s\nType: %s", ssid, password, type);
+            if ( ssid != null && !ssid.isEmpty() && password != null && !password.isEmpty()) {
+              extractedBarcodeText = String.format("SSID: %s\nPassword: %s\nType: %d", ssid, password, type);
+            }
             break;
           case FirebaseVisionBarcode.TYPE_URL:
             String title = barcode.getUrl().getTitle();
             String url = barcode.getUrl().getUrl();
-            extractedBarcodeText = String.format("Title: %s\nURL: %s", title, url);
+            if (title != null && !title.isEmpty() && url != null && !url.isEmpty()) {
+              extractedBarcodeText = String.format("Title: %s\nURL: %s", title, url);
+            }
             break;
         }
       } catch (Exception e) {
@@ -440,9 +449,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
                 extractedBarcodeText = extractBarcodeText(barcodes);
                 runningBarRecognition = false;
-                recognitionResults.setText(extractedBarcodeText);
                 if (!extractedBarcodeText.isEmpty()) {
                   tts.speak("Barcode detected", TextToSpeech.QUEUE_ADD, null);
+                  barcodeRecognitionResults.setText("Barcode data:\n" + extractedBarcodeText);
                 }
                 Log.d("detected bar code data", extractedBarcodeText);
               }
