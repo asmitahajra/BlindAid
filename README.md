@@ -23,6 +23,7 @@ Barcode detection
 Text detection example 1
 
 ![salt](https://user-images.githubusercontent.com/30727326/60102562-9189a780-977b-11e9-82b3-b805a127313c.jpeg)
+
 Text detection example 2
 
 The model used currently recognizes 80 different classes of objects, and will be trained on extended datasets to further increase the efficiency of the app.
