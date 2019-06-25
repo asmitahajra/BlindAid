@@ -3,8 +3,10 @@
 BlindAid is an app that performs real time object detection by continuously detecting the objects (bounding boxes and classes) in the frames seen by your device's back camera, using a quantized [MobileNet SSD](https://github.com/tensorflow/models/tree/master/research/object_detection) model trained on the [COCO dataset](http://cocodataset.org/).
 
 Additional features:
-+ The app performs position detection of different objects in a frame (left, centre and right) and speaks it aloud
-+ Performs text detection with speech on being prompted
++ Speech promopted service. Trigger object detection by saying 'start guiding me/guide me'
++ The app then performs position detection of different objects in a frame (left, centre and right) with speech
++ 'Stop guiding me/ stop' to stop the detection
++ Speech prompted text detection. Trigger OCR with the words 'what's written in front of me/read'
 + Performs barcode detection
 
 The model files are downloaded via Gradle scripts when you build and run. You don't need to perform any steps to download TFLite models into the project explicitly.
