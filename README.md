@@ -4,7 +4,7 @@ BlindAid is an app that performs real time object detection by continuously dete
 
 Additional features:
 + The app performs position detection of different objects in a frame (left, centre and right) and speaks it aloud
-+ Performs text detection on being prompted
++ Performs text detection with speech on being prompted
 + Performs barcode detection
 
 The model files are downloaded via Gradle scripts when you build and run. You don't need to perform any steps to download TFLite models into the project explicitly.
