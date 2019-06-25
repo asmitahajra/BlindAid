@@ -319,7 +319,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     // don't speak same thing again unless you've been silent for 5secs
     if (lastSpokenTimeStamp + MIN_STALE_SILENT_DURATION > getCurrentTimeStamp()
-            || !detectedText.isEmpty() || !extractedBarcodeText.isEmpty()
       /* && lastSpokenSentence.equals(completeSentence)*/) {
       return;
     }
@@ -450,7 +449,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
                 String barcodeText = extractBarcodeText(barcodes);
                 runningBarRecognition = false;
-                if (!barcodeText.isEmpty()) {
+                if (!barcodeText.isEmpty() && !extractedBarcodeText.equals(barcodeText)) {
                   extractedBarcodeText = barcodeText;
                   tts.speak("Barcode detected", TextToSpeech.QUEUE_ADD, null);
                   barcodeRecognitionResults.setText("Barcode data:\n" + extractedBarcodeText);
