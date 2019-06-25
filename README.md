@@ -1,6 +1,6 @@
 # BlindAid
 ### Overview
-BlindAid an app that performs real time object detection by continuously detecting the objects (bounding boxes and classes) in the frames seen by your device's back camera, using a quantized [MobileNet SSD](https://github.com/tensorflow/models/tree/master/research/object_detection) model trained on the [COCO dataset](http://cocodataset.org/).
+BlindAid is an app that performs real time object detection by continuously detecting the objects (bounding boxes and classes) in the frames seen by your device's back camera, using a quantized [MobileNet SSD](https://github.com/tensorflow/models/tree/master/research/object_detection) model trained on the [COCO dataset](http://cocodataset.org/).
 
 Additional features:
 + The app performs position detection of different objects in a frame (left, centre and right) and speaks it aloud
