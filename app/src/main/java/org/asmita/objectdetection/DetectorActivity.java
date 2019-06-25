@@ -387,6 +387,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                               @Override
                               public void onFailure(@NonNull Exception e) {
                                 runningTextRecognition = false;
+                                e.printStackTrace();
                                 Log.d("detected text", e.toString());
                               }
                             });
@@ -444,6 +445,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               @Override
               public void onFailure(@NonNull Exception e) {
                 runningBarRecognition = false;
+                e.printStackTrace();
+                Log.d("detected bar code error", e.toString());
               }
             });
 
