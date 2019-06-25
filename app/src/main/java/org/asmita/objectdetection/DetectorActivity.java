@@ -403,18 +403,22 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       String extractedBarcodeText = barcode.getRawValue();
       int valueType = barcode.getValueType();
       // See API reference for complete list of supported types
-      switch (valueType) {
-        case FirebaseVisionBarcode.TYPE_WIFI:
-          String ssid = barcode.getWifi().getSsid();
-          String password = barcode.getWifi().getPassword();
-          int type = barcode.getWifi().getEncryptionType();
-          extractedBarcodeText = String.format("SSID: %s\nPassword: %s\nType: %s", ssid, password, type);
-          break;
-        case FirebaseVisionBarcode.TYPE_URL:
-          String title = barcode.getUrl().getTitle();
-          String url = barcode.getUrl().getUrl();
-          extractedBarcodeText = String.format("Title: %s\nURL: %s", title, url);
-          break;
+      try {
+        switch (valueType) {
+          case FirebaseVisionBarcode.TYPE_WIFI:
+            String ssid = barcode.getWifi().getSsid();
+            String password = barcode.getWifi().getPassword();
+            int type = barcode.getWifi().getEncryptionType();
+            extractedBarcodeText = String.format("SSID: %s\nPassword: %s\nType: %s", ssid, password, type);
+            break;
+          case FirebaseVisionBarcode.TYPE_URL:
+            String title = barcode.getUrl().getTitle();
+            String url = barcode.getUrl().getUrl();
+            extractedBarcodeText = String.format("Title: %s\nURL: %s", title, url);
+            break;
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
       }
       extractedBarcodeTexts.add(extractedBarcodeText);
     }
