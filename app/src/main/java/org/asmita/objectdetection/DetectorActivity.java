@@ -50,6 +50,7 @@ import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 import com.google.firebase.ml.vision.text.RecognizedLanguage;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -122,6 +123,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private long lastSpokenTimeStamp = 0;
   private HashMap<String, ArrayList<String>> objectsToSpeak;
   private String detectedText = "";
+  private String extractedBarcodeText = "";
   private TextView recognitionResults;
 
   @Override
@@ -314,7 +316,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     // don't speak same thing again unless you've been silent for 5secs
     if (lastSpokenTimeStamp + MIN_STALE_SILENT_DURATION > getCurrentTimeStamp()
-            || !detectedText.isEmpty()
+            || !detectedText.isEmpty() || !extractedBarcodeText.isEmpty()
       /* && lastSpokenSentence.equals(completeSentence)*/) {
       return;
     }
@@ -390,11 +392,38 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                             });
   }
 
+  private String extractBarcodeText(List<FirebaseVisionBarcode> barcodes) {
+    ArrayList<String> extractedBarcodeTexts = new ArrayList<>();
+    for (FirebaseVisionBarcode barcode : barcodes) {
+      Rect bounds = barcode.getBoundingBox();
+      Point[] corners = barcode.getCornerPoints();
+
+      String extractedBarcodeText = barcode.getRawValue();
+      int valueType = barcode.getValueType();
+      // See API reference for complete list of supported types
+      switch (valueType) {
+        case FirebaseVisionBarcode.TYPE_WIFI:
+          String ssid = barcode.getWifi().getSsid();
+          String password = barcode.getWifi().getPassword();
+          int type = barcode.getWifi().getEncryptionType();
+          extractedBarcodeText = String.format("SSID: %s\nPassword: %s\nType: %s", ssid, password, type);
+          break;
+        case FirebaseVisionBarcode.TYPE_URL:
+          String title = barcode.getUrl().getTitle();
+          String url = barcode.getUrl().getUrl();
+          extractedBarcodeText = String.format("Title: %s\nURL: %s", title, url);
+          break;
+      }
+      extractedBarcodeTexts.add(extractedBarcodeText);
+    }
+    return String.join("\n----------\n", extractedBarcodeTexts);
+  }
+
   private void runBarRecognition() {
     if (runningBarRecognition) {
       return;
     }
-    runningTextRecognition = true;
+    runningBarRecognition = true;
     FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(croppedBitmap);
     FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance()
             .getVisionBarcodeDetector();
@@ -402,46 +431,24 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionBarcode>>() {
               @Override
               public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
-                for (FirebaseVisionBarcode barcode : barcodes) {
-                  Rect bounds = barcode.getBoundingBox();
-                  Point[] corners = barcode.getCornerPoints();
-
-                  String rawValue = barcode.getRawValue();
-
-                  int valueType = barcode.getValueType();
-                  // See API reference for complete list of supported types
-                  switch (valueType) {
-                    case FirebaseVisionBarcode.TYPE_WIFI:
-                      String ssid = barcode.getWifi().getSsid();
-                      String password = barcode.getWifi().getPassword();
-                      int type = barcode.getWifi().getEncryptionType();
-                      break;
-                    case FirebaseVisionBarcode.TYPE_URL:
-                      String title = barcode.getUrl().getTitle();
-                      String url = barcode.getUrl().getUrl();
-                      break;
-                  }
-
-                  // Task completed successfully
-                  // ...
-
+                extractedBarcodeText = extractBarcodeText(barcodes);
+                runningBarRecognition = false;
+                recognitionResults.setText(extractedBarcodeText);
+                if (!extractedBarcodeText.isEmpty()) {
+                  tts.speak("Barcode detected", TextToSpeech.QUEUE_ADD, null);
                 }
+                Log.d("detected bar code data", extractedBarcodeText);
               }
             })
             .addOnFailureListener(new OnFailureListener() {
               @Override
               public void onFailure(@NonNull Exception e) {
-                // Task failed with an exception
-                // ...
+                runningBarRecognition = false;
               }
             });
 
 
   }
-
-
-
-
 
   @Override
   protected void processImage() {
@@ -474,6 +481,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
             runTextRecognition();
+            runBarRecognition();
             final long startTime = SystemClock.uptimeMillis();
             List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
 
