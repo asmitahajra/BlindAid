@@ -15,5 +15,5 @@
 -->
 
 <resources>
-    <string name="activity_name_detection">Object Detection</string>
+    <string name="activity_name_detection">BlindAid</string>
 </resources>
