@@ -1,10 +1,17 @@
-# TensorFlow Lite Object Detection Android Demo
+# BlindAid
 ### Overview
-This is an camera app that continuously detects the objects (bounding boxes and classes) in the frames seen by your device's back camera, using a quantized [MobileNet SSD](https://github.com/tensorflow/models/tree/master/research/object_detection) model trained on the [COCO dataset](http://cocodataset.org/). These instructions walk you through building and running the demo on an Android device.
+BlindAid an app that performs real time object detection by continuously detecting the objects (bounding boxes and classes) in the frames seen by your device's back camera, using a quantized [MobileNet SSD](https://github.com/tensorflow/models/tree/master/research/object_detection) model trained on the [COCO dataset](http://cocodataset.org/).
 
-The model files are downloaded via Gradle scripts when you build and run. You don't need to do any steps to download TFLite models into the project explicitly.
+Additional features:
++ The app performs position detection of different objects in a frame (left, centre and right) and speaks it aloud
++ Performs text detection on being prompted
++ Performs barcode detection
+
+The model files are downloaded via Gradle scripts when you build and run. You don't need to perform any steps to download TFLite models into the project explicitly.
 
 Application can run either on device or emulator.
+
+![Banana on the left, Orange on the right](https://user-images.githubusercontent.com/30727326/60101900-3905da80-977a-11e9-90f3-05ae911a1065.jpeg)
 
 <!-- TODO(b/124116863): Add app screenshot. -->
 
