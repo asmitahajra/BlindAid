@@ -99,7 +99,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String POSITION_LEFT = "left";
   private static final String POSITION_FRONT = "front";
   private static final String POSITION_RIGHT = "right";
-  private final String REGEX_OCR_TRIGGER_SPEECH = "what('s| is) written in front of me";
+  private final String REGEX_OCR_TRIGGER_SPEECH = "(what('s| is) written in front of me)|(read)";
+  private final String ERROR_COULDNT_READ = "I can't see anything written in front of you!";
 
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
@@ -558,7 +559,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private void speakRecognizedText() {
     if(detectedText.isEmpty()) {
-      tts.speak("I can't see anything written in front of you!", TextToSpeech.QUEUE_ADD, null);
+      tts.speak(ERROR_COULDNT_READ, TextToSpeech.QUEUE_ADD, null);
     } else {
       tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
     }
