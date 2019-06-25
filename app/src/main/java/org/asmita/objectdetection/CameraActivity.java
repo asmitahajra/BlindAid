@@ -25,6 +25,7 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.AudioManager;
 import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
@@ -50,6 +51,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+
 import org.asmita.objectdetection.env.ImageUtils;
 import org.asmita.objectdetection.env.Logger;
 
@@ -63,6 +66,7 @@ public abstract class CameraActivity extends AppCompatActivity
   private static final int PERMISSIONS_REQUEST = 1;
 
   private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
+  private static final String PERMISSION_RECORD_AUDIO = Manifest.permission.RECORD_AUDIO;
   protected int previewWidth = 0;
   protected int previewHeight = 0;
   private boolean debug = false;
@@ -75,7 +79,9 @@ public abstract class CameraActivity extends AppCompatActivity
   private int yRowStride;
   private Runnable postInferenceCallback;
   private Runnable imageConverter;
-
+  protected SpeechRecognitionListener listener;
+  protected int streamVolume;
+  protected AudioManager audioManager;
 //  private LinearLayout bottomSheetLayout;
 //  private LinearLayout gestureLayout;
 //  private BottomSheetBehavior sheetBehavior;
@@ -319,19 +325,24 @@ public abstract class CameraActivity extends AppCompatActivity
     } catch (final InterruptedException e) {
       LOGGER.e(e, "Exception!");
     }
-
+    listener.destroy();
+//    listener.stopListening();
+//    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, streamVolume, 0);
     super.onPause();
   }
 
   @Override
   public synchronized void onStop() {
     LOGGER.d("onStop " + this);
+//    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, streamVolume, 0);
     super.onStop();
   }
 
   @Override
   public synchronized void onDestroy() {
     LOGGER.d("onDestroy " + this);
+    listener.destroy();
+    //    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, streamVolume, 0);
     super.onDestroy();
   }
 
@@ -356,7 +367,8 @@ public abstract class CameraActivity extends AppCompatActivity
 
   private boolean hasPermission() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED;
+      return (checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(PERMISSION_RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
     } else {
       return true;
     }
@@ -364,14 +376,15 @@ public abstract class CameraActivity extends AppCompatActivity
 
   private void requestPermission() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      if (shouldShowRequestPermissionRationale(PERMISSION_CAMERA)) {
+      if (shouldShowRequestPermissionRationale(PERMISSION_CAMERA) ||
+              shouldShowRequestPermissionRationale(PERMISSION_RECORD_AUDIO)) {
         Toast.makeText(
                 CameraActivity.this,
-                "Camera permission is required for this demo",
+                "Camera and mic permission is required",
                 Toast.LENGTH_LONG)
             .show();
       }
-      requestPermissions(new String[] {PERMISSION_CAMERA}, PERMISSIONS_REQUEST);
+      requestPermissions(new String[] {PERMISSION_CAMERA, PERMISSION_RECORD_AUDIO}, PERMISSIONS_REQUEST);
     }
   }
 

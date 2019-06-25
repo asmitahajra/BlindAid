@@ -35,34 +35,23 @@
             android:layout_height="match_parent"
             android:layout_marginBottom="200dp"
             tools:context="org.tensorflow.demo.CameraActivity" />
-        <LinearLayout
-            android:id="@+id/recognition_results_layout"
+        <TextView
+            android:id="@+id/recognition_results"
             android:layout_alignParentBottom="true"
-            android:layout_width="match_parent"
-            android:gravity="center_vertical"
-            android:layout_height="100dp">
-            <TextView
-                android:id="@+id/recognition_results"
-                android:layout_gravity="left"
-                android:padding="10dp"
-                android:layout_weight="1"
-                android:layout_width="wrap_content"
-                android:scrollbars="vertical"
-                android:textSize="16sp"
-                android:textColor="@android:color/white"
-                android:layout_height="100dp" />
-            <Button
-                android:onClick="speakRecognizedText"
-                android:text="Speak"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
+            android:layout_gravity="left"
+            android:padding="10dp"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:scrollbars="vertical"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:layout_height="100dp" />
 
         <TextView
             android:id="@+id/barcode_recognition_results"
             android:layout_gravity="left"
             android:padding="10dp"
-            android:layout_above="@+id/recognition_results_layout"
+            android:layout_above="@+id/recognition_results"
             android:layout_width="match_parent"
             android:scrollbars="vertical"
             android:textSize="16sp"

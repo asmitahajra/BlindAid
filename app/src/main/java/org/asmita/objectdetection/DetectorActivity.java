@@ -16,6 +16,7 @@
 
 package org.asmita.objectdetection;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -27,9 +28,11 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.media.AudioManager;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import androidx.annotation.NonNull;
 
@@ -96,6 +99,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String POSITION_LEFT = "left";
   private static final String POSITION_FRONT = "front";
   private static final String POSITION_RIGHT = "right";
+  private final String REGEX_OCR_TRIGGER_SPEECH = "what('s| is) written in front of me";
 
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
@@ -383,6 +387,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                         if (!extractedText.isEmpty()) {
                           detectedText = extractedText;
                           recognitionResults.setText("Detected text:\n" + detectedText);
+                        } else {
+                          detectedText = "";
+                          recognitionResults.setText("");
                         }
                         Log.d("detected text", detectedText);
                       }
@@ -451,7 +458,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 runningBarRecognition = false;
                 if (!barcodeText.isEmpty() && !extractedBarcodeText.equals(barcodeText)) {
                   extractedBarcodeText = barcodeText;
-                  tts.speak("Barcode detected", TextToSpeech.QUEUE_ADD, null);
+                  tts.speak("Barcode detected", TextToSpeech.QUEUE_FLUSH, null);
                   barcodeRecognitionResults.setText("Barcode data:\n" + extractedBarcodeText);
                 }
                 Log.d("detected bar code data", extractedBarcodeText);
@@ -549,8 +556,43 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         });
   }
 
-  public void speakRecognizedText(View v) {
-    tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
+  private void speakRecognizedText() {
+    if(detectedText.isEmpty()) {
+      tts.speak("I can't see anything written in front of you!", TextToSpeech.QUEUE_ADD, null);
+    } else {
+      tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
+    }
+  }
+
+  @Override
+  public synchronized void onResume() {
+    super.onResume();
+    initSpeechRecognitionListener();
+//    audioManager=(AudioManager)this.getSystemService(Context.AUDIO_SERVICE);
+//    streamVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+//    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
+  }
+
+  private void initSpeechRecognitionListener() {
+    listener =
+            new SpeechRecognitionListener(this, new SpeechRecognitionListener.OnSpeechRecognitionResult() {
+              @Override
+              public void onSuccess(ArrayList<String> matches) {
+                for(String match: matches) {
+                  Log.d("SpeechRecognitionListener", match);
+                  if (match.matches(REGEX_OCR_TRIGGER_SPEECH)) {
+                    speakRecognizedText();
+                    break;
+                  }
+                }
+              }
+
+              @Override
+              public void onError(int error) {
+
+              }
+            });
+    listener.startListening();
   }
 
   @Override
