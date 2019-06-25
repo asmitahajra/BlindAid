@@ -37,6 +37,7 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -378,11 +379,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                       @Override
                       public void onSuccess(FirebaseVisionText firebaseVisionText) {
                         runningTextRecognition = false;
-                        detectedText = extractDetectedText(firebaseVisionText);
+                        String extractedText = extractDetectedText(firebaseVisionText);
                         // TODO : auto-correct the detected text
-                        if (!detectedText.isEmpty()) {
+                        if (!extractedText.isEmpty()) {
+                          detectedText = extractedText;
                           recognitionResults.setText("Detected text:\n" + detectedText);
-                          tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
                         }
                         Log.d("detected text", detectedText);
                       }
@@ -447,9 +448,10 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionBarcode>>() {
               @Override
               public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
-                extractedBarcodeText = extractBarcodeText(barcodes);
+                String barcodeText = extractBarcodeText(barcodes);
                 runningBarRecognition = false;
-                if (!extractedBarcodeText.isEmpty()) {
+                if (!barcodeText.isEmpty()) {
+                  extractedBarcodeText = barcodeText;
                   tts.speak("Barcode detected", TextToSpeech.QUEUE_ADD, null);
                   barcodeRecognitionResults.setText("Barcode data:\n" + extractedBarcodeText);
                 }
@@ -546,6 +548,10 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 });
           }
         });
+  }
+
+  public void speakRecognizedText(View v) {
+    tts.speak(detectedText, TextToSpeech.QUEUE_ADD, null);
   }
 
   @Override
