@@ -369,6 +369,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(croppedBitmap);
     FirebaseVisionTextRecognizer detector = FirebaseVision.getInstance()
             .getOnDeviceTextRecognizer();
+    Log.d("text recognition", "running");
     Task<FirebaseVisionText> result =
             detector.processImage(image)
                     .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
@@ -428,6 +429,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(croppedBitmap);
     FirebaseVisionBarcodeDetector detector = FirebaseVision.getInstance()
             .getVisionBarcodeDetector();
+    Log.d("bar code recognition", "running");
     Task<List<FirebaseVisionBarcode>> result = detector.detectInImage(image)
             .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionBarcode>>() {
               @Override
